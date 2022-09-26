@@ -1,18 +1,19 @@
 package com.yjntc.gateway.initializer;
 
+import com.yjntc.gateway.bean.ConfigDefinition;
 import com.yjntc.gateway.bean.FactoryDefinition;
 import com.yjntc.gateway.dao.ConfigDefinitionDao;
 import com.yjntc.gateway.dao.FactoryDefinitionDao;
+import com.yjntc.gateway.util.IdUtil;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
+import org.springframework.cloud.gateway.support.Configurable;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import javax.transaction.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.lang.reflect.Field;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -63,11 +64,8 @@ public class DefinitionInitializer {
         return initializer;
     }
 
-    public synchronized void init() throws SystemException, HeuristicRollbackException, HeuristicMixedException, RollbackException {
-        Transaction transaction = null;
-        if (null != transactionManager){
-            transaction = transactionManager.getTransaction();
-        }
+    public synchronized void init() throws SystemException {
+        Transaction transaction = createTransaction();
         try{
             // delete all
             factoryDefinitionDao.deleteAll();
@@ -76,13 +74,33 @@ public class DefinitionInitializer {
             // reload all
             List<FactoryDefinition> factoryDefinitions = loadFactoryDefinitions();
 
-
-
-            transaction.commit();
+            // save all
+            factoryDefinitionDao.saveAllAndFlush(factoryDefinitions);
+            commit(transaction);
         }catch (Exception e){
-            if (null != transaction){
-                transaction.commit();
-            }
+            rollback(transaction);
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    private Transaction createTransaction() throws SystemException {
+        Transaction transaction = null;
+        if (null != transactionManager){
+            transaction = transactionManager.getTransaction();
+        }
+        return transaction;
+    }
+
+    private void rollback(Transaction transaction) throws SystemException {
+        if (null != transaction){
+            transaction.rollback();
+        }
+    }
+
+    private void commit(Transaction transaction) throws SystemException, HeuristicRollbackException, HeuristicMixedException, RollbackException {
+        if (null != transaction){
+            transaction.commit();
         }
     }
 
@@ -104,9 +122,35 @@ public class DefinitionInitializer {
      * @return List<FactoryDefinition>
      */
     protected final List<FactoryDefinition> loadFilterFactoryDefinitions(){
+        Map<String, AbstractGatewayFilterFactory> gatewayFilterFactoryMap = applicationContext.getBeansOfType(AbstractGatewayFilterFactory.class);
 
+        for (AbstractGatewayFilterFactory gatewayFilterFactory : gatewayFilterFactoryMap.values()) {
+            Class<? extends AbstractGatewayFilterFactory> filterFactoryClass = gatewayFilterFactory.getClass();
+            Class configClass = gatewayFilterFactory.getConfigClass();
+
+
+        }
 
         return new ArrayList<>();
+    }
+
+    private List<ConfigDefinition> toDefinition(FactoryDefinition factoryDefinition,Configurable configurable){
+        String factoryDefinitionId = factoryDefinition.getFactoryDefinitionId();
+        Objects.requireNonNull(factoryDefinitionId,"factory definition id must be not null");
+        Class configClass = configurable.getConfigClass();
+        Field[] declaredFields = configClass.getDeclaredFields();
+        List<ConfigDefinition> configDefinitions = new ArrayList<>(declaredFields.length);
+        for (Field declaredField : declaredFields) {
+            String simpleUuid = IdUtil.simpleUuid();
+            ConfigDefinition configDefinition = new ConfigDefinition();
+            configDefinition.setFactoryDefinitionId(factoryDefinitionId);
+            configDefinition.setConfigDefinitionId(simpleUuid);
+            configDefinition.setConfigClassName(configurable.getClass().getName());
+            configDefinition.setConfigArgName(declaredField.getName());
+            configDefinitions.add(configDefinition);
+        }
+
+        return configDefinitions;
     }
 
 

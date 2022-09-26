@@ -1,9 +1,12 @@
 package com.yjntc.gateway.bean;
 
 import lombok.Data;
+import org.springframework.cloud.gateway.route.RouteDefinition;
 
 import javax.persistence.*;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author WangKangSheng

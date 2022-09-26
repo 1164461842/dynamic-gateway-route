@@ -5,6 +5,7 @@ import lombok.Data;
 import javax.persistence.*;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author WangKangSheng
@@ -22,11 +23,12 @@ public class FactoryDefinition {
 
     private String factoryClassName;
 
-    private Short factoryType;
+    private String factoryType;
 
     private Date createTime;
 
     @OneToMany(fetch = FetchType.LAZY,mappedBy = "factory_definition_id")
     private List<ConfigDefinition> configDefinitions;
 
+    private Map<String,Long> map;
 }

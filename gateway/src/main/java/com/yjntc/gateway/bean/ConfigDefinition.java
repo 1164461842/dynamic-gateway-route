@@ -20,7 +20,9 @@ public class ConfigDefinition {
 
     private String factoryDefinitionId;
 
-    private Short configType;
+    private String configClassName;
+
+    private String configType;
 
     private String configArgName;
 

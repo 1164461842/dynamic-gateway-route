@@ -18,6 +18,9 @@ public class Factory {
     private String factoryDefinitionId;
     private String factoryType;
 
+    @OneToOne(mappedBy = "factory_definition_id")
+    private FactoryDefinition factoryDefinition;
+
     @OneToMany(fetch = FetchType.LAZY,mappedBy = "factory_id")
     private List<Config> configs;
 
