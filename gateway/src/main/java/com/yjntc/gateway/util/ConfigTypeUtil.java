@@ -7,6 +7,7 @@ import org.springframework.cloud.gateway.support.Configurable;
 
 import java.lang.reflect.*;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * @author wangkangsheng
@@ -16,6 +17,7 @@ import java.util.Set;
 public class ConfigTypeUtil {
 
 	public String getType(Class<?> clazz){
+		Pattern pattern = Pattern.compile("");
 
 		return "";
 	}
